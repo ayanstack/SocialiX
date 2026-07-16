@@ -1,12 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Flame } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import PostCard from '../components/PostCard';
 import UserCard from '../components/UserCard';
-import { mockPosts, mockUsers, trendingTags } from '../utils/mockData';
+import { mockUsers, trendingTags } from '../utils/mockData';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function ExplorePage() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/posts');
+      // For explore, maybe we want random order or just sort by likes
+      const sortedPosts = data.sort((a, b) => b.likes?.length - a.likes?.length);
+      setPosts(sortedPosts);
+    } catch (error) {
+      toast.error('Failed to load explore posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-darkBg text-white animate-fadeIn flex flex-col">
       <Navbar />
@@ -56,11 +80,19 @@ export default function ExplorePage() {
           {/* Grid */}
           <div>
             <h2 className="text-lg font-heading font-medium mb-4">Discover</h2>
-            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-              {mockPosts.slice().reverse().map(post => (
-                <PostCard key={post._id} post={post} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-10">
+                <LoadingSpinner />
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="text-center text-gray-400 py-10">No posts found.</div>
+            ) : (
+              <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+                {posts.map(post => (
+                  <PostCard key={post._id} post={post} />
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>

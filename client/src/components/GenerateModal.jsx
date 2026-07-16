@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Image as ImageIcon } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const styles = ['Realistic', 'Anime', 'Oil Painting', 'Cyberpunk', 'Watercolor', 'Sketch'];
 
@@ -9,18 +12,37 @@ export default function GenerateModal({ isOpen, onClose }) {
   const [selectedStyle, setSelectedStyle] = useState("Cyberpunk");
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState(null);
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt) return;
     setIsGenerating(true);
     setResultImage(null);
-    // Simulate generation
-    setTimeout(() => {
-      setResultImage(`https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/400/500`);
+    
+    try {
+      // Append style to prompt
+      const finalPrompt = `${prompt} in ${selectedStyle} style`;
+      const { data } = await api.post('/posts', { 
+        prompt: finalPrompt, 
+        caption: `Created with ${selectedStyle} style: ${prompt}` 
+      });
+      
+      setResultImage(data.imageLink);
+      toast.success('Image generated successfully!');
+      
+      // Delay closing modal and redirecting
+      setTimeout(() => {
+        onClose();
+        navigate(`/post/${data._id}`);
+      }, 2000);
+      
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to generate image');
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   return (

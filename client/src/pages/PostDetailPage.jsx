@@ -1,22 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Heart, Share2, MoreHorizontal, MessageCircle, ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import { mockPosts, currentUser } from '../utils/mockData';
+import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function PostDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const post = mockPosts.find(p => p._id === id) || mockPosts[0];
+  const { currentUser } = useAuth();
   
+  const [post, setPost] = useState(null);
+  const [comments, setComments] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likes.length);
+  const [likesCount, setLikesCount] = useState(0);
   const [commentText, setCommentText] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+  useEffect(() => {
+    fetchPostData();
+  }, [id]);
+
+  const fetchPostData = async () => {
+    try {
+      setLoading(true);
+      const [postRes, commentsRes] = await Promise.all([
+        api.get(`/posts/${id}`),
+        api.get(`/posts/${id}/comments`)
+      ]);
+      
+      setPost(postRes.data);
+      setComments(commentsRes.data);
+      setLikesCount(postRes.data.likes?.length || 0);
+      setIsLiked(postRes.data.likes?.includes(currentUser?._id));
+    } catch (error) {
+      toast.error('Failed to load post details');
+      navigate('/feed');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleLike = async () => {
+    try {
+      // Optimistic update
+      setIsLiked(!isLiked);
+      setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+      
+      await api.put(`/posts/${id}`);
+    } catch (error) {
+      // Revert if failed
+      setIsLiked(!isLiked);
+      setLikesCount(prev => isLiked ? prev + 1 : prev - 1);
+      toast.error('Failed to like post');
+    }
+  };
+
+  const handleComment = async () => {
+    if (!commentText.trim()) return;
+    try {
+      await api.post(`/posts/${id}/comments`, { text: commentText });
+      setCommentText('');
+      // Refresh comments
+      const commentsRes = await api.get(`/posts/${id}/comments`);
+      setComments(commentsRes.data);
+      toast.success('Comment added');
+    } catch (error) {
+      toast.error('Failed to add comment');
+    }
+  };
+
+  if (loading || !post) {
+    return (
+      <div className="min-h-screen bg-darkBg text-white flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex justify-center items-center">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-darkBg text-white animate-fadeIn flex flex-col">
@@ -87,7 +152,7 @@ export default function PostDetailPage() {
                   </button>
                   <button className="flex items-center gap-2 group">
                     <MessageCircle className="w-7 h-7 text-white group-hover:text-accentCyan transition-colors" />
-                    <span className="font-bold text-lg">{post.comments.length}</span>
+                    <span className="font-bold text-lg">{comments.length}</span>
                   </button>
                 </div>
                 <button className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
@@ -98,35 +163,38 @@ export default function PostDetailPage() {
               {/* Comments */}
               <div className="space-y-6 pt-2 pb-20 lg:pb-0">
                 <h4 className="font-heading font-medium text-lg">Comments</h4>
-                {post.comments.map(comment => (
+                {comments.map(comment => (
                   <div key={comment._id} className="flex gap-3">
-                    <img src={comment.user.Avatar} alt="avatar" className="w-8 h-8 rounded-full" />
+                    <img src={comment.user?.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?.name}`} alt="avatar" className="w-8 h-8 rounded-full" />
                     <div>
                       <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-bold text-sm">{comment.user.name}</span>
-                        <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                        <span className="font-bold text-sm">{comment.user?.name}</span>
+                        <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleDateString()}</span>
                       </div>
                       <p className="text-sm text-gray-300">{comment.text}</p>
                     </div>
                   </div>
                 ))}
+                {comments.length === 0 && <p className="text-sm text-gray-500">No comments yet. Be the first!</p>}
               </div>
             </div>
             
             {/* Comment Input Sticky Bottom */}
             <div className="sticky bottom-0 bg-cardBg pt-4 mt-auto border-t border-white/10 pb-4 lg:pb-0">
               <div className="flex items-center gap-3">
-                <img src={currentUser.Avatar} alt="Your Avatar" className="w-8 h-8 rounded-full" />
+                <img src={currentUser?.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}`} alt="Your Avatar" className="w-8 h-8 rounded-full" />
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleComment()}
                     placeholder="Add a comment..."
                     className="w-full bg-white/5 border border-white/10 rounded-full pl-4 pr-16 py-2.5 text-sm outline-none focus:border-accentViolet transition-colors placeholder-gray-500"
                   />
                   <button 
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-sm font-bold transition-colors ${commentText ? 'text-accentCyan hover:text-white' : 'text-gray-600'}`}
+                    onClick={handleComment}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-sm font-bold transition-colors px-4 py-1 rounded-full ${commentText ? 'text-accentCyan hover:bg-accentCyan/10' : 'text-gray-600'}`}
                     disabled={!commentText}
                   >
                     Post

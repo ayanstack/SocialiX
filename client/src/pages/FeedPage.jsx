@@ -1,13 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import PostCard from '../components/PostCard';
 import StoryBar from '../components/StoryBar';
-import { mockPosts } from '../utils/mockData';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function FeedPage() {
   const [activeTab, setActiveTab] = useState('Latest');
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/posts');
+      // Sort by newest first
+      const sortedPosts = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setPosts(sortedPosts);
+    } catch (error) {
+      toast.error('Failed to load posts');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-darkBg text-white animate-fadeIn flex flex-col">
@@ -52,12 +74,21 @@ export default function FeedPage() {
 
           <StoryBar />
 
-          {/* Masonry Grid */}
-          <div className="mt-8 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-            {mockPosts.map(post => (
-              <PostCard key={post._id} post={post} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <LoadingSpinner />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center text-gray-400 py-20">
+              No posts found.
+            </div>
+          ) : (
+            <div className="mt-8 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+              {posts.map(post => (
+                <PostCard key={post._id} post={post} />
+              ))}
+            </div>
+          )}
         </main>
       </div>
     </div>

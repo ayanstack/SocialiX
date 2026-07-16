@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sparkles, UserCircle } from 'lucide-react';
-import { currentUser } from '../utils/mockData';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const location = useLocation();
+  const { currentUser } = useAuth();
 
   // Don't show complex nav on login/register/landing
   const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
@@ -34,9 +35,9 @@ export default function Navbar() {
 
       {/* Right User Action */}
       <div className="flex items-center gap-4">
-        {!isAuthPage ? (
+        {!isAuthPage && currentUser ? (
           <Link to={`/profile/${currentUser._id}`}>
-            <img src={currentUser.Avatar} alt="User Avatar" className="w-9 h-9 rounded-full object-cover border-2 border-transparent hover:border-accentViolet transition-all cursor-pointer" />
+            <img src={currentUser.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`} alt="User Avatar" className="w-9 h-9 rounded-full object-cover border-2 border-transparent hover:border-accentViolet transition-all cursor-pointer bg-white/10" />
           </Link>
         ) : (
           location.pathname !== '/' && (

@@ -3,6 +3,9 @@ import { Sparkles, Image as ImageIcon, Download, Share2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import LoadingSpinner from '../components/LoadingSpinner';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const styles = ['Realistic', 'Anime', 'Oil Painting', 'Cyberpunk', 'Watercolor', 'Sketch', '3D Render', 'Origami'];
 
@@ -11,15 +14,30 @@ export default function GeneratePage() {
   const [selectedStyle, setSelectedStyle] = useState("Cyberpunk");
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState(null);
+  const [generatedPostId, setGeneratedPostId] = useState(null);
+  const navigate = useNavigate();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt) return;
     setIsGenerating(true);
     setResultImage(null);
-    setTimeout(() => {
-      setResultImage(`https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/800/800`);
+    setGeneratedPostId(null);
+    
+    try {
+      const finalPrompt = `${prompt} in ${selectedStyle} style`;
+      const { data } = await api.post('/posts', { 
+        prompt: finalPrompt, 
+        caption: `Created with ${selectedStyle} style: ${prompt}` 
+      });
+      
+      setResultImage(data.imageLink);
+      setGeneratedPostId(data._id);
+      toast.success('Image generated and saved to Feed/Explore!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to generate image');
+    } finally {
       setIsGenerating(false);
-    }, 2500);
+    }
   };
 
   return (
@@ -124,13 +142,22 @@ export default function GeneratePage() {
             {/* Post-generation actions */}
             {resultImage && (
               <div className="p-4 border-t border-white/10 bg-black/20 flex gap-4 justify-end animate-fadeIn">
-                <button className="px-6 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center gap-2">
+                <a 
+                  href={resultImage} 
+                  download="generated-art.png"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center gap-2"
+                >
                   <Download className="w-4 h-4" />
                   Save
-                </button>
-                <button className="px-6 py-2 rounded-xl bg-gradient-to-r from-accentViolet to-accentCyan text-white font-medium hover:scale-105 transition-transform flex items-center gap-2">
+                </a>
+                <button 
+                  onClick={() => navigate('/explore')}
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-accentViolet to-accentCyan text-white font-medium hover:scale-105 transition-transform flex items-center gap-2"
+                >
                   <Share2 className="w-4 h-4" />
-                  Share to Feed
+                  View in Explore
                 </button>
               </div>
             )}

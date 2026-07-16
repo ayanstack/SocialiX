@@ -2,32 +2,38 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { Phone } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
 
   const [formdata, setFormData] = useState({
     name: "",
     email: "",
-    Phone: "",
+    phone: "",
     password: "",
     bio: "",
   })
 
-  const { name, email, Phone, password, bio } = formdata
+  const { name, email, phone, password, bio } = formdata
+  const { register } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
       ...formdata,
-      [e.target.value]: e.target.name
+      [e.target.name]: e.target.value
     })
   }
 
-  const navigate = useNavigate();
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Registration submitted");
-    navigate('/feed');
+    setIsSubmitting(true);
+    const success = await register(formdata);
+    setIsSubmitting(false);
+    if (success) {
+      navigate('/feed');
+    }
   };
 
   return (
@@ -48,6 +54,9 @@ export default function RegisterPage() {
             <label className="text-sm font-medium text-gray-300 ml-1">Name</label>
             <input
               type="text"
+              name="name"
+              value={name}
+              onChange={handleChange}
               required
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentCyan transition-colors"
               placeholder="Your Name"
@@ -57,6 +66,9 @@ export default function RegisterPage() {
             <label className="text-sm font-medium text-gray-300 ml-1">Email</label>
             <input
               type="email"
+              name="email"
+              value={email}
+              onChange={handleChange}
               required
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentCyan transition-colors"
               placeholder="you@example.com"
@@ -66,6 +78,9 @@ export default function RegisterPage() {
             <label className="text-sm font-medium text-gray-300 ml-1">Phone</label>
             <input
               type="tel"
+              name="phone"
+              value={phone}
+              onChange={handleChange}
               required
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentCyan transition-colors"
               placeholder="+91911234567890"
@@ -76,6 +91,9 @@ export default function RegisterPage() {
             <label className="text-sm font-medium text-gray-300 ml-1">Password</label>
             <input
               type="password"
+              name="password"
+              value={password}
+              onChange={handleChange}
               required
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentCyan transition-colors"
               placeholder="••••••••"
@@ -85,6 +103,9 @@ export default function RegisterPage() {
             <label className="text-sm font-medium text-gray-300 ml-1">Your Bio</label>
             <textarea
               type="text"
+              name="bio"
+              value={bio}
+              onChange={handleChange}
               required
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentCyan transition-colors"
               placeholder="Enter Your Bio"
@@ -92,9 +113,10 @@ export default function RegisterPage() {
           </div>
           <button
             type="submit"
-            className="w-full py-3.5 mt-6 rounded-xl bg-gradient-to-r from-accentCyan to-accentViolet text-white font-medium hover:scale-[1.02] transition-transform shadow-lg shadow-accentCyan/20"
+            disabled={isSubmitting}
+            className="w-full py-3.5 mt-6 rounded-xl bg-gradient-to-r from-accentCyan to-accentViolet text-white font-medium hover:scale-[1.02] transition-transform shadow-lg shadow-accentCyan/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Create Account
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 

@@ -1,14 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login submitted");
-    navigate('/feed');
+    setIsSubmitting(true);
+    const success = await login(email, password);
+    setIsSubmitting(false);
+    if (success) {
+      navigate('/feed');
+    }
   };
 
   return (
@@ -33,6 +42,8 @@ export default function LoginPage() {
             <input 
               type="email" 
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentViolet transition-colors"
               placeholder="you@example.com"
             />
@@ -45,6 +56,8 @@ export default function LoginPage() {
             <input 
               type="password" 
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accentViolet transition-colors"
               placeholder="••••••••"
             />
@@ -52,9 +65,10 @@ export default function LoginPage() {
 
           <button 
             type="submit"
-            className="w-full py-3.5 mt-4 rounded-xl bg-gradient-to-r from-accentViolet to-accentCyan text-white font-medium hover:scale-[1.02] transition-transform shadow-lg shadow-accentViolet/20"
+            disabled={isSubmitting}
+            className="w-full py-3.5 mt-4 rounded-xl bg-gradient-to-r from-accentViolet to-accentCyan text-white font-medium hover:scale-[1.02] transition-transform shadow-lg shadow-accentViolet/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Log In
+            {isSubmitting ? 'Logging in...' : 'Log In'}
           </button>
         </form>
 

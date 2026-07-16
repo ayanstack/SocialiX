@@ -1,17 +1,37 @@
 import React, { useState } from 'react';
 import { Heart, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 export default function PostCard({ post }) {
+  const { currentUser } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likes.length);
+  const [isLiked, setIsLiked] = useState(post.likes?.includes(currentUser?._id));
+  const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
 
-  const handleLike = (e) => {
+  const handleLike = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsLiked(!isLiked);
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+    
+    if (!currentUser) {
+      toast.error('Please log in to like posts');
+      return;
+    }
+
+    try {
+      // Optimistic UI update
+      setIsLiked(!isLiked);
+      setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+      
+      await api.put(`/posts/${post._id}`);
+    } catch (error) {
+      // Revert if API fails
+      setIsLiked(!isLiked);
+      setLikesCount(prev => isLiked ? prev + 1 : prev - 1);
+      toast.error('Failed to like post');
+    }
   };
 
   return (
@@ -49,10 +69,10 @@ export default function PostCard({ post }) {
         </div>
 
         <div className="flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-          <img src={post.user.Avatar} alt={post.user.name} className="w-8 h-8 rounded-full border border-white/20" />
+          <img src={post.user?.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user?.name}`} alt={post.user?.name} className="w-8 h-8 rounded-full border border-white/20" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{post.user.name}</p>
-            <p className="text-xs text-gray-300 truncate">@{post.user.name.replace(/\s+/g, '').toLowerCase()}</p>
+            <p className="text-sm font-medium text-white truncate">{post.user?.name || 'User'}</p>
+            <p className="text-xs text-gray-300 truncate">@{post.user?.name?.replace(/\s+/g, '').toLowerCase() || 'user'}</p>
           </div>
         </div>
       </div>

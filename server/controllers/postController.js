@@ -91,7 +91,8 @@ const getPosts = async (req, res) => {
     const posts = await Post.find().populate("user");
     return res.status(200).json(posts);
   } catch (error) {
-    return res.status(500).json({ message: "Posts Not Found!" });
+    console.error("getPosts error:", error);
+    return res.status(500).json({ message: error.message || "Posts Not Found!" });
   }
 };
 
@@ -103,7 +104,8 @@ const getPost = async (req, res) => {
     }
     return res.status(200).json(post);
   } catch (error) {
-    return res.status(500).json({ message: "Post Not Found!" });
+    console.error("getPost error:", error);
+    return res.status(500).json({ message: error.message || "Post Not Found!" });
   }
 };
 
@@ -123,7 +125,7 @@ const likeAndUnlikePost = async (req, res) => {
     throw new Error("Post Not Found!")
   }
   // Check if Already liked
-  if (post.likes.includes(currentUser._id)) {
+  if (post.likes.some(like => like.toString() === currentUser._id.toString())) {
     // DIslike
     // Add Follower In liked
     let updatedLikesList = post.likes.filter(like => like.toString() !== currentUser._id.toString())

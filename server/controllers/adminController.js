@@ -60,24 +60,21 @@ const getReports = async (req, res) => {
 }
 
 const updateUser = async (req, res) => {
-
     let userId = req.params.uid
 
     const user = await User.findById(userId)
 
     if (!user) {
-        res.status(404)
-        throw new Error('User Not Found!')
+        return res.status(404).json({ message: 'User Not Found!' })
     }
 
     let updatedUser = await User.findByIdAndUpdate(userId, { isActive: user.isActive ? false : true }, { new: true })
 
-    if (!updateUser) {
-        res.status(409)
-        throw new Error('User Not Updated!')
+    if (!updatedUser) {
+        return res.status(409).json({ message: 'User Not Updated!' })
     }
 
-    res.status(200).json(updatedUser)
+    return res.status(200).json(updatedUser)
 }
 
 

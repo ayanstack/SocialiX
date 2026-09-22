@@ -4,14 +4,9 @@ import Post from "../models/postModel.js"
 const getComments = async (req, res) => {
     const postId = req.params.pid
 
-    const comments = await Comment.find({ post: postId })
+    const comments = await Comment.find({ post: postId }).populate('user')
 
-    if (!comments) {
-        res.status(404)
-        throw new Error("Comments Not Found!")
-    }
-
-    res.status(200).json(comments)
+    return res.status(200).json(comments || [])
 }
 
 const addComment = async (req, res) => {
@@ -22,13 +17,11 @@ const addComment = async (req, res) => {
     const post = await Post.findById(postId)
 
     if (!post) {
-        res.status(404)
-        throw new Error("Post Not Found");
+        return res.status(404).json({ message: "Post Not Found" })
     }
 
     if (!text) {
-        res.status(400)
-        throw new Error("Please Enter Text");
+        return res.status(400).json({ message: "Please Enter Text" })
     }
 
     const newComment = new Comment({
@@ -41,32 +34,28 @@ const addComment = async (req, res) => {
     await newComment.populate('user')
     await newComment.populate('post')
 
-    res.status(201).json(newComment)
+    return res.status(201).json(newComment)
 }
 
 const removeComment = async (req, res) => {
-
     try {
         const commentId = req.params.cid
 
         const comment = await Comment.findById(commentId)
 
         if (!comment) {
-            res.status(404)
-            throw new Error("Comment Not Found")
+            return res.status(404).json({ message: "Comment Not Found" })
         }
 
         await Comment.findByIdAndDelete(commentId)
 
-        res.status(200).json({
+        return res.status(200).json({
             _id: commentId,
             message: "Comment Deleted"
         })
     } catch (error) {
-        res.status(409)
-        throw new Error("Comment Not Removed")
+        return res.status(409).json({ message: "Comment Not Removed" })
     }
-
 }
 
 const commentController = { getComments, addComment, removeComment }

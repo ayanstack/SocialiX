@@ -11,17 +11,14 @@ const savePost = async (req, res) => {
     const post = await Post.findById(postId)
 
     if (!post) {
-        res.status(404)
-        throw new Error("post Not Found");
+        return res.status(404).json({ message: "Post Not Found" })
     }
 
-
     //Check if post is already saved
-    const saveExists = await Saved.findOne({ user: userId })
-    res.status(409)
-    throw new Error("Post Already Saved!");
-
-
+    const saveExists = await Saved.findOne({ user: userId, post: postId })
+    if (saveExists) {
+        return res.status(409).json({ message: "Post Already Saved!" })
+    }
 
     // Create Save post
     const savedPost = new SavedPost({
@@ -32,34 +29,22 @@ const savePost = async (req, res) => {
     await savedPost.save()
     await savedPost.populate('post')
 
-    if (!savedPost) {
-        res.status(409)
-        throw new Error("Post Not Saved!");
-    }
-
-    res.status(201).json(savedPost)
+    return res.status(201).json(savedPost)
 }
 
 //Get Save Post 
 const getSavePosts = async (req, res) => {
-
     const userId = req.user._id
 
     const allMySavePosts = await Saved.find({ user: userId }).populate('post')
 
-    if (!allMySavePosts) {
-        req.status(404)
-        throw new Error("Saved Posts Not Found!");
-
-    }
-    res.status(200).json(allMySavePosts)
+    return res.status(200).json(allMySavePosts || [])
 }
 
 // Delete Saved Post
 const removeSavedPost = async (req, res) => {
-
-    await Saved.findOneAndDelete(req.params.pid)
-    res.status(200).json({
+    await Saved.findOneAndDelete({ _id: req.params.pid })
+    return res.status(200).json({
         _id: req.params.pid,
         msg: "Saved Post Removed"
     })

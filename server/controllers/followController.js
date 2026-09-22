@@ -1,21 +1,17 @@
 import User from "../models/userModel.js"
 
 const followUserRequest = async (req, res) => {
-
-
-    let targetUser = await User.findById(req.params.uid)
+    let targetUser = await User.findById(req.params.uid).select("-password")
     let currentUser = await User.findById(req.user._id)
 
     //Check If Both User Exists
     if (!targetUser || !currentUser) {
-        res.status(404)
-        throw new Error("User Not Found");
+        return res.status(404).json({ message: "User Not Found" })
     }
 
     // Check If Already Followed
-    if (targetUser.followers.includes(currentUser._id)) {
-        res.status(409)
-        throw new Error("Already Followed!");
+    if (targetUser.followers.some(f => f.toString() === currentUser._id.toString())) {
+        return res.status(409).json({ message: "Already Followed!" })
     }
     // Add Follower 
     targetUser.followers.push(currentUser._id)
@@ -25,24 +21,21 @@ const followUserRequest = async (req, res) => {
     currentUser.following.push(targetUser._id)
     await currentUser.save()
 
-    res.status(200).json(targetUser).select("-password")
+    return res.status(200).json(targetUser)
 }
 
 const unfollowUserRequest = async (req, res) => {
-
-    let targetUser = await User.findById(req.params.uid)
+    let targetUser = await User.findById(req.params.uid).select("-password")
     let currentUser = await User.findById(req.user._id)
 
     //Check If Both User Exists
     if (!targetUser || !currentUser) {
-        res.status(404)
-        throw new Error("User Not Found");
+        return res.status(404).json({ message: "User Not Found" })
     }
 
     // Check If Already followed
-    if (!targetUser.followers.includes(currentUser._id)) {
-        res.status(409)
-        throw new Error("Already Un-Followed!");
+    if (!targetUser.followers.some(f => f.toString() === currentUser._id.toString())) {
+        return res.status(409).json({ message: "Already Un-Followed!" })
     }
 
     // Remove Follower 
@@ -51,14 +44,11 @@ const unfollowUserRequest = async (req, res) => {
     await targetUser.save()
 
     // Remove Following 
-    let updatedFollowingList = currentUser.following.filter(follower => follower.toString() !== targetUser._id.toString())
-    currentUser.following = updatedFollowerList
+    let updatedFollowingList = currentUser.following.filter(following => following.toString() !== targetUser._id.toString())
+    currentUser.following = updatedFollowingList
     await currentUser.save()
 
-    res.status(200).json(targetUser).select("-password")
-
-    res.send("Unfollowed")
-
+    return res.status(200).json(targetUser)
 }
 const followController = { followUserRequest, unfollowUserRequest }
 

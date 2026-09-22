@@ -41,10 +41,10 @@ const generateAndPost = async (req, res) => {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); // ✅ API key was missing
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image", //  Wrong model name fixed
+      model: "gemini-2.0-flash-preview-image-generation",
       contents: prompt,
       config: {
-        responseModalities: ["TEXT", "IMAGE"], //  Was missing
+        responseModalities: ["TEXT", "IMAGE"],
       },
     });
 
@@ -88,10 +88,13 @@ const generateAndPost = async (req, res) => {
 
 const getPosts = async (req, res) => {
   try {
-    const posts = await Post.find().populate("user");
+    const posts = await Post.find({ isPublished: true })
+      .populate("user", "name Avatar bio email _id")
+      .sort({ createdAt: -1 })
+      .lean();
     return res.status(200).json(posts);
   } catch (error) {
-    console.error("getPosts error:", error);
+    console.error("getPosts error:", error.stack || error.message);
     return res.status(500).json({ message: error.message || "Posts Not Found!" });
   }
 };

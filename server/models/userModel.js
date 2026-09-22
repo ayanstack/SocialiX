@@ -13,19 +13,23 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: Number,
-        required: [true, "Please Enter Your phone"],
+        default: null,
     },
     password: {
         type: String,
-        required: [true, "Please Enter Your password"],
+        default: null,
+    },
+    googleId: {
+        type: String,
+        default: null,
     },
     Avatar: {
         type: String,
-        default : "",
+        default: "",
     },
     bio: {
         type: String,
-        required: [true, "Please ENter Your Bio"],
+        default: "",
     },
     followers: [
         {

@@ -2,6 +2,7 @@ import express from "express"
 import dotenv from "dotenv"
 import colors from "colors"
 import path from "path"
+import cors from "cors"
 import { fileURLToPath } from "url"
 import connectDB from "./config/dbConfig.js"
 
@@ -23,9 +24,16 @@ const app = express()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// ✅ CORS
+app.use(cors({
+  origin: process.env.CLIENT_URL || "*",
+  credentials: true,
+}))
+
 // ✅ Body Parsers (routes se pehle)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
 
 // ✅ DB Connection (simple call)
 connectDB()

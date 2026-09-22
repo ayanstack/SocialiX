@@ -11,8 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  // We decode the token or fetch user profile from an endpoint if needed.
-  // Since the backend returns full user object on login, we'll store it in localStorage for now
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (user && token) {
@@ -27,13 +25,11 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
-      
       setToken(data.token);
       setCurrentUser(data);
-      toast.success('Welcome back!');
+      toast.success('Welcome back! 👋');
       return true;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -41,16 +37,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (credential) => {
+    try {
+      const { data } = await api.post('/auth/google', { credential });
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
+      setToken(data.token);
+      setCurrentUser(data);
+      if (data.isNewUser) {
+        toast.success(`Welcome to SocialiX, ${data.name}! 🎉`);
+      } else {
+        toast.success(`Welcome back, ${data.name}! 👋`);
+      }
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Google login failed');
+      return false;
+    }
+  };
+
   const register = async (userData) => {
     try {
       const { data } = await api.post('/auth/register', userData);
-      
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
-      
       setToken(data.token);
       setCurrentUser(data);
-      toast.success('Registration successful!');
+      toast.success('Account created! Check your email for a welcome message 🎉');
       return true;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Registration failed');
@@ -66,8 +79,15 @@ export const AuthProvider = ({ children }) => {
     toast.success('Logged out successfully');
   };
 
+  // Update currentUser in state and localStorage
+  const updateCurrentUser = (updatedUser) => {
+    const merged = { ...currentUser, ...updatedUser };
+    localStorage.setItem('user', JSON.stringify(merged));
+    setCurrentUser(merged);
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ currentUser, token, loading, login, loginWithGoogle, register, logout, updateCurrentUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );

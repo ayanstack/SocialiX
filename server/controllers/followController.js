@@ -1,4 +1,5 @@
 import User from "../models/userModel.js"
+import { sendFollowNotificationEmail } from "../utils/emailService.js"
 
 const followUserRequest = async (req, res) => {
     let targetUser = await User.findById(req.params.uid).select("-password")
@@ -20,6 +21,9 @@ const followUserRequest = async (req, res) => {
     // Add Following 
     currentUser.following.push(targetUser._id)
     await currentUser.save()
+
+    // Send email notification (non-blocking)
+    sendFollowNotificationEmail(targetUser.email, targetUser.name, currentUser.name).catch(() => {})
 
     return res.status(200).json(targetUser)
 }

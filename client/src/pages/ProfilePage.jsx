@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Settings, MapPin, Link as LinkIcon, Calendar } from 'lucide-react';
+import { Settings, MapPin, Link as LinkIcon, Calendar, Pencil } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import PostCard from '../components/PostCard';
@@ -9,12 +9,14 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getAvatarUrl } from '../utils/avatar';
+import EditProfileModal from '../components/EditProfileModal';
 
 export default function ProfilePage() {
   const { id } = useParams();
   const { currentUser } = useAuth();
   const currentUserId = currentUser?._id || currentUser?.id;
   const isMe = currentUserId === id;
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const [activeTab, setActiveTab] = useState('Posts');
   const [isFollowing, setIsFollowing] = useState(false);
@@ -27,6 +29,11 @@ export default function ProfilePage() {
     fetchUserPosts();
   }, [id]);
 
+  // Sync when currentUser updates (after profile edit)
+  useEffect(() => {
+    if (isMe && currentUser) setProfileUser(currentUser);
+  }, [currentUser]);
+
   const fetchUserPosts = async () => {
     try {
       setLoading(true);
@@ -35,7 +42,7 @@ export default function ProfilePage() {
       const filtered = data.filter(p => (p.user?._id || p.user?.id) === id);
       setUserPosts(filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       
-      // Determine profile info (If it's me, use currentUser, else try to extract from their posts)
+      // Determine profile info
       if (isMe) {
         setProfileUser(currentUser);
       } else if (filtered.length > 0) {
@@ -92,8 +99,11 @@ export default function ProfilePage() {
                     
                     <div className="flex gap-3">
                       {isMe ? (
-                        <button className="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 font-medium transition-colors flex items-center gap-2">
-                          <Settings className="w-4 h-4" />
+                        <button
+                          onClick={() => setShowEditModal(true)}
+                          className="px-6 py-2 rounded-full bg-gradient-to-r from-accentCyan/20 to-accentViolet/20 hover:from-accentCyan/30 hover:to-accentViolet/30 border border-accentCyan/30 font-medium transition-all duration-200 flex items-center gap-2 hover:scale-105"
+                        >
+                          <Pencil className="w-4 h-4 text-accentCyan" />
                           Edit Profile
                         </button>
                       ) : (
@@ -172,6 +182,11 @@ export default function ProfilePage() {
           )}
         </main>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <EditProfileModal onClose={() => setShowEditModal(false)} />
+      )}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getAvatarUrl } from '../utils/avatar';
 
 export default function UserCard({ user }) {
   const [isFollowing, setIsFollowing] = useState(false);
+  const userId = user._id || user.id;
 
   const toggleFollow = (e) => {
     e.preventDefault();
@@ -11,16 +13,16 @@ export default function UserCard({ user }) {
 
   return (
     <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-5 rounded-2xl flex flex-col items-center gap-3 w-48 shrink-0 hover:bg-white/10 transition-colors">
-      <Link to={`/profile/${user._id}`}>
+      <Link to={`/profile/${userId}`}>
         <img 
-          src={user.Avatar} 
-          alt={user.name} 
+          src={getAvatarUrl(user)} 
+          alt={user.name || 'User'} 
           className="w-20 h-20 rounded-full object-cover border-2 border-accentViolet p-0.5"
         />
       </Link>
       
       <div className="text-center w-full">
-        <Link to={`/profile/${user._id}`} className="block font-medium text-white hover:text-accentCyan transition-colors truncate">
+        <Link to={`/profile/${userId}`} className="block font-medium text-white hover:text-accentCyan transition-colors truncate">
           {user.name}
         </Link>
         <p className="text-xs text-gray-400">{(user.followers.length + (isFollowing ? 1 : 0)).toLocaleString()} followers</p>

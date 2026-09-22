@@ -8,10 +8,14 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getAvatarUrl } from '../utils/avatar';
 
 export default function ProfilePage() {
   const { id } = useParams();
   const { currentUser } = useAuth();
+  const currentUserId = currentUser?._id || currentUser?.id;
+  const isMe = currentUserId === id;
+
   const [activeTab, setActiveTab] = useState('Posts');
   const [isFollowing, setIsFollowing] = useState(false);
   
@@ -28,11 +32,11 @@ export default function ProfilePage() {
       setLoading(true);
       const { data } = await api.get('/posts');
       // Filter posts that belong to this profile user
-      const filtered = data.filter(p => p.user?._id === id);
+      const filtered = data.filter(p => (p.user?._id || p.user?.id) === id);
       setUserPosts(filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       
       // Determine profile info (If it's me, use currentUser, else try to extract from their posts)
-      if (id === currentUser?._id) {
+      if (isMe) {
         setProfileUser(currentUser);
       } else if (filtered.length > 0) {
         setProfileUser(filtered[0].user);
@@ -44,8 +48,8 @@ export default function ProfilePage() {
     }
   };
 
-  const isMe = currentUser?._id === id;
   const displayUser = profileUser || currentUser; // Fallback if no posts
+  const bannerSeed = encodeURIComponent(displayUser?.name || 'default');
 
   return (
     <div className="min-h-screen bg-darkBg text-white animate-fadeIn flex flex-col">
@@ -64,7 +68,7 @@ export default function ProfilePage() {
               {/* Banner */}
               <div className="h-48 md:h-64 w-full relative">
                 <img 
-                  src={`https://picsum.photos/seed/${displayUser?._id || 'default'}banner/1200/400`} 
+                  src={`https://picsum.photos/seed/${bannerSeed}banner/1200/400`} 
                   alt="Cover" 
                   className="w-full h-full object-cover"
                 />
@@ -75,8 +79,8 @@ export default function ProfilePage() {
                 {/* Header Info */}
                 <div className="relative flex flex-col md:flex-row gap-6 items-start md:items-end -mt-16 md:-mt-20 mb-8">
                   <img 
-                    src={displayUser?.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUser?.name}`} 
-                    alt={displayUser?.name} 
+                    src={getAvatarUrl(displayUser)} 
+                    alt={displayUser?.name || 'User'} 
                     className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-darkBg object-cover z-10 shadow-2xl relative bg-darkBg"
                   />
                   

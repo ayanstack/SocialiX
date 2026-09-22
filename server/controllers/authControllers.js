@@ -38,10 +38,12 @@ const registerUser = async (req, res) => {
     }
     return res.status(201).json({
         id: user._id,
+        _id: user._id,
         name: user.name, 
         bio: user.bio,
         phone: user.phone,
         email: user.email,
+        Avatar: user.Avatar || "",
         isAdmin: user.isAdmin,
         isActive: user.isActive,
         credits: user.credits,
@@ -63,9 +65,12 @@ const loginUser = async (req, res) => {
     if (user && await bcrypt.compare(password, user.password)) {
         return res.status(200).json({
             id: user._id,
+            _id: user._id,
             name: user.name,
+            bio: user.bio,
             email: user.email,
             phone: user.phone,
+            Avatar: user.Avatar || "",
             isAdmin: user.isAdmin,
             isActive: user.isActive,
             credits: user.credits,

@@ -11,7 +11,7 @@ export default function Sidebar() {
     { path: '/feed', label: 'Home', icon: Home },
     { path: '/explore', label: 'Explore', icon: Compass },
     { path: '/generate', label: 'Generate', icon: Wand2 },
-    { path: `/profile/${currentUser?._id}`, label: 'Profile', icon: User },
+    { path: `/profile/${currentUser?._id || currentUser?.id}`, label: 'Profile', icon: User },
   ];
 
   const handleLogout = (e) => {

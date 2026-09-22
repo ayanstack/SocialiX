@@ -6,11 +6,13 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getAvatarUrl } from '../utils/avatar';
 
 export default function PostDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const currentUserId = currentUser?._id || currentUser?.id;
   
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
@@ -34,7 +36,7 @@ export default function PostDetailPage() {
       setPost(postRes.data);
       setComments(commentsRes.data);
       setLikesCount(postRes.data.likes?.length || 0);
-      setIsLiked(postRes.data.likes?.includes(currentUser?._id));
+      setIsLiked(postRes.data.likes?.some(like => (like?._id || like)?.toString() === currentUserId?.toString()));
     } catch (error) {
       toast.error('Failed to load post details');
       navigate('/feed');
@@ -115,11 +117,11 @@ export default function PostDetailPage() {
             
             {/* Header: User */}
             <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/10 shrink-0">
-              <Link to={`/profile/${post.user._id}`} className="flex items-center gap-3 group">
-                <img src={post.user.Avatar} alt="Avatar" className="w-12 h-12 rounded-full border border-white/20 group-hover:border-accentViolet transition-colors" />
+              <Link to={`/profile/${post.user?._id || post.user?.id}`} className="flex items-center gap-3 group">
+                <img src={getAvatarUrl(post.user)} alt="Avatar" className="w-12 h-12 rounded-full border border-white/20 group-hover:border-accentViolet transition-colors" />
                 <div>
-                  <h3 className="font-heading font-bold text-lg group-hover:text-accentCyan transition-colors">{post.user.name}</h3>
-                  <p className="text-sm text-gray-400">@{post.user.name.replace(/\s+/g, '').toLowerCase()}</p>
+                  <h3 className="font-heading font-bold text-lg group-hover:text-accentCyan transition-colors">{post.user?.name || 'User'}</h3>
+                  <p className="text-sm text-gray-400">@{post.user?.name ? post.user.name.replace(/\s+/g, '').toLowerCase() : 'user'}</p>
                 </div>
               </Link>
               <button className="text-gray-400 hover:text-white transition-colors">
@@ -165,10 +167,10 @@ export default function PostDetailPage() {
                 <h4 className="font-heading font-medium text-lg">Comments</h4>
                 {comments.map(comment => (
                   <div key={comment._id} className="flex gap-3">
-                    <img src={comment.user?.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?.name}`} alt="avatar" className="w-8 h-8 rounded-full" />
+                    <img src={getAvatarUrl(comment.user)} alt="avatar" className="w-8 h-8 rounded-full" />
                     <div>
                       <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-bold text-sm">{comment.user?.name}</span>
+                        <span className="font-bold text-sm">{comment.user?.name || 'User'}</span>
                         <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleDateString()}</span>
                       </div>
                       <p className="text-sm text-gray-300">{comment.text}</p>
@@ -182,7 +184,7 @@ export default function PostDetailPage() {
             {/* Comment Input Sticky Bottom */}
             <div className="sticky bottom-0 bg-cardBg pt-4 mt-auto border-t border-white/10 pb-4 lg:pb-0">
               <div className="flex items-center gap-3">
-                <img src={currentUser?.Avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}`} alt="Your Avatar" className="w-8 h-8 rounded-full" />
+                <img src={getAvatarUrl(currentUser)} alt="Your Avatar" className="w-8 h-8 rounded-full" />
                 <div className="flex-1 relative">
                   <input
                     type="text"

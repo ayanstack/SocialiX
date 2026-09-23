@@ -182,29 +182,29 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   
-                  <div className="flex gap-6 bg-white/5 border border-white/10 rounded-2xl p-6 h-fit justify-center md:justify-around">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold font-heading">{userPosts.length}</div>
-                      <div className="text-xs text-gray-400 uppercase tracking-wider">Posts</div>
+                  <div className="grid grid-cols-3 divide-x divide-white/10 bg-white/5 border border-white/10 rounded-2xl p-4 w-full h-fit items-center shadow-lg">
+                    <div className="flex flex-col items-center justify-center px-1 py-1">
+                      <div className="text-xl md:text-2xl font-bold font-heading text-white">{userPosts.length}</div>
+                      <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider font-semibold mt-0.5">Posts</div>
                     </div>
                     
                     {/* Followers Clickable Stat */}
-                    <div 
+                    <button 
                       onClick={() => setUserListModal({ title: 'Followers', users: displayUser?.followers || [] })}
-                      className="text-center cursor-pointer hover:opacity-80 transition-opacity px-2 py-1 rounded-xl hover:bg-white/5"
+                      className="flex flex-col items-center justify-center px-1 py-1 hover:bg-white/10 rounded-xl transition-all cursor-pointer group"
                     >
-                      <div className="text-2xl font-bold font-heading text-accentCyan">{followersCount}</div>
-                      <div className="text-xs text-gray-400 uppercase tracking-wider underline underline-offset-4 decoration-accentCyan/40">Followers</div>
-                    </div>
+                      <div className="text-xl md:text-2xl font-bold font-heading text-accentCyan group-hover:scale-110 transition-transform">{followersCount}</div>
+                      <div className="text-[10px] md:text-xs text-gray-400 group-hover:text-accentCyan uppercase tracking-wider font-semibold mt-0.5 underline underline-offset-4 decoration-accentCyan/40">Followers</div>
+                    </button>
                     
                     {/* Following Clickable Stat */}
-                    <div 
+                    <button 
                       onClick={() => setUserListModal({ title: 'Following', users: displayUser?.following || [] })}
-                      className="text-center cursor-pointer hover:opacity-80 transition-opacity px-2 py-1 rounded-xl hover:bg-white/5"
+                      className="flex flex-col items-center justify-center px-1 py-1 hover:bg-white/10 rounded-xl transition-all cursor-pointer group"
                     >
-                      <div className="text-2xl font-bold font-heading text-accentViolet">{displayUser?.following?.length || 0}</div>
-                      <div className="text-xs text-gray-400 uppercase tracking-wider underline underline-offset-4 decoration-accentViolet/40">Following</div>
-                    </div>
+                      <div className="text-xl md:text-2xl font-bold font-heading text-accentViolet group-hover:scale-110 transition-transform">{displayUser?.following?.length || 0}</div>
+                      <div className="text-[10px] md:text-xs text-gray-400 group-hover:text-accentViolet uppercase tracking-wider font-semibold mt-0.5 underline underline-offset-4 decoration-accentViolet/40">Following</div>
+                    </button>
                   </div>
                 </div>
 
@@ -255,6 +255,7 @@ export default function ProfilePage() {
         <UserListModal
           title={userListModal.title}
           users={userListModal.users}
+          userId={id}
           onClose={() => setUserListModal(null)}
           onFollowChange={fetchProfileData}
         />

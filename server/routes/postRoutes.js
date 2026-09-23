@@ -1,4 +1,5 @@
 import express from "express"
+import multer from "multer"
 import protect from "../middleware/authMiddleware.js"
 import postController from "../controllers/postController.js"
 
@@ -6,9 +7,11 @@ import savePostController from "../controllers/savePostController.js"
 import commentController from "../controllers/commentController.js"
 
 const router = express.Router({ mergeParams: true })
+const upload = multer({ dest: "uploads/" })
 
 router.get("/", protect.forUser, postController.getPosts)
 router.post("/", protect.forUser, postController.generateAndPost)
+router.post("/create", protect.forUser, upload.single("image"), postController.createDirectPost)
 router.get("/:pid", protect.forUser, postController.getPost)
 router.put("/:pid", protect.forUser, postController.likeAndUnlikePost)
 router.post("/:pid", protect.forUser, postController.reportPost)

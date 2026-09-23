@@ -20,43 +20,86 @@ export default function ProfilePage() {
 
   const [activeTab, setActiveTab] = useState('Posts');
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
   
   const [userPosts, setUserPosts] = useState([]);
+  const [likedPosts, setLikedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profileUser, setProfileUser] = useState(null);
 
   useEffect(() => {
-    fetchUserPosts();
-  }, [id]);
+    fetchProfileData();
+  }, [id, currentUserId]);
 
   // Sync when currentUser updates (after profile edit)
   useEffect(() => {
     if (isMe && currentUser) setProfileUser(currentUser);
   }, [currentUser]);
 
-  const fetchUserPosts = async () => {
+  const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/posts');
-      // Filter posts that belong to this profile user
-      const filtered = data.filter(p => (p.user?._id || p.user?.id) === id);
-      setUserPosts(filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       
-      // Determine profile info
+      // Fetch profile user info
+      let userRes = null;
       if (isMe) {
-        setProfileUser(currentUser);
-      } else if (filtered.length > 0) {
-        setProfileUser(filtered[0].user);
+        userRes = await api.get('/profile/me');
+      } else {
+        userRes = await api.get(`/profile/user/${id}`).catch(() => null);
+      }
+
+      // Fetch posts
+      const postsRes = await api.get('/posts');
+      const allPosts = postsRes.data || [];
+
+      // Posts created by profile user
+      const filteredPosts = allPosts.filter(p => (p.user?._id || p.user?.id || p.user) === id);
+      setUserPosts(filteredPosts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+
+      // Posts liked by profile user
+      const liked = allPosts.filter(p => p.likes?.some(l => (l?._id || l)?.toString() === id));
+      setLikedPosts(liked.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+
+      if (userRes?.data) {
+        setProfileUser(userRes.data);
+        const followers = userRes.data.followers || [];
+        const amIFollowing = followers.some(f => (f?._id || f)?.toString() === currentUserId?.toString());
+        setIsFollowing(amIFollowing);
+        setFollowersCount(followers.length);
+      } else if (filteredPosts.length > 0) {
+        setProfileUser(filteredPosts[0].user);
       }
     } catch (error) {
-      toast.error('Failed to load profile posts');
+      console.error(error);
+      toast.error('Failed to load profile details');
     } finally {
       setLoading(false);
     }
   };
 
-  const displayUser = profileUser || currentUser; // Fallback if no posts
+  const handleFollowToggle = async () => {
+    if (!currentUser) return toast.error('Please log in');
+    try {
+      if (isFollowing) {
+        setIsFollowing(false);
+        setFollowersCount(prev => Math.max(0, prev - 1));
+        await api.put(`/user/unfollow/${id}`);
+        toast.success(`Unfollowed ${displayUser?.name || 'user'}`);
+      } else {
+        setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
+        await api.put(`/user/follow/${id}`);
+        toast.success(`Following ${displayUser?.name || 'user'}`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Action failed');
+      setIsFollowing(!isFollowing);
+    }
+  };
+
+  const displayUser = profileUser || currentUser;
   const bannerSeed = encodeURIComponent(displayUser?.name || 'default');
+  const displayedPosts = activeTab === 'Posts' ? userPosts : likedPosts;
 
   return (
     <div className="min-h-screen bg-darkBg text-white animate-fadeIn flex flex-col">
@@ -108,11 +151,11 @@ export default function ProfilePage() {
                         </button>
                       ) : (
                         <button 
-                          onClick={() => setIsFollowing(!isFollowing)}
+                          onClick={handleFollowToggle}
                           className={`px-8 py-2 rounded-full font-medium transition-all ${
                             isFollowing 
-                              ? 'bg-white/10 hover:bg-white/20 border border-white/20' 
-                              : 'bg-gradient-to-r from-accentViolet to-accentCyan text-white hover:scale-105 shadow-lg'
+                              ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-white' 
+                              : 'bg-gradient-to-r from-accentViolet to-accentCyan text-white hover:scale-105 shadow-lg font-bold'
                           }`}
                         >
                           {isFollowing ? 'Following' : 'Follow'}
@@ -126,7 +169,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                   <div className="md:col-span-2 space-y-4">
                     <p className="text-gray-300 leading-relaxed max-w-2xl">
-                      {displayUser?.bio || "Digital artist specializing in surreal, dreamy, and cyberpunk aesthetic landscapes generated through intricate prompting and curation."}
+                      {displayUser?.bio || "Digital creator & artist sharing AI art and visuals on Socialix."}
                     </p>
                     
                     <div className="flex flex-wrap gap-4 text-sm text-gray-500">
@@ -142,7 +185,7 @@ export default function ProfilePage() {
                       <div className="text-xs text-gray-400 uppercase tracking-wider">Posts</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold font-heading">{(displayUser?.followers?.length || 0) + (isFollowing ? 1 : 0)}</div>
+                      <div className="text-2xl font-bold font-heading">{followersCount}</div>
                       <div className="text-xs text-gray-400 uppercase tracking-wider">Followers</div>
                     </div>
                     <div className="text-center">
@@ -162,7 +205,7 @@ export default function ProfilePage() {
                         activeTab === tab ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                       }`}
                     >
-                      {tab}
+                      {tab} ({tab === 'Posts' ? userPosts.length : likedPosts.length})
                       {activeTab === tab && (
                         <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accentViolet rounded-t-full" />
                       )}
@@ -171,11 +214,17 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Grid */}
-                <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4 pb-12">
-                  {userPosts.map(post => (
-                    <PostCard key={post._id} post={post} />
-                  ))}
-                </div>
+                {displayedPosts.length === 0 ? (
+                  <div className="text-center py-16 text-gray-500">
+                    <p className="text-lg">No {activeTab.toLowerCase()} found yet.</p>
+                  </div>
+                ) : (
+                  <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4 pb-12">
+                    {displayedPosts.map(post => (
+                      <PostCard key={post._id} post={post} />
+                    ))}
+                  </div>
+                )}
 
               </div>
             </>

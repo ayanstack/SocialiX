@@ -203,9 +203,40 @@ const reportPost = async (req, res) => {
   }
   res.status(201).json(newReport)
 
-}
+const createDirectPost = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { prompt, caption, imageLink } = req.body;
+    let finalImageUrl = imageLink || "";
 
-const postController = { generateAndPost, getPosts, getPost, likeAndUnlikePost, reportPost };
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.path);
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      if (uploadResult?.secure_url) {
+        finalImageUrl = uploadResult.secure_url;
+      }
+    }
+
+    if (!finalImageUrl) {
+      return res.status(400).json({ message: "Please upload an image or provide an image link!" });
+    }
+
+    const newPost = await Post.create({
+      user: userId,
+      imageLink: finalImageUrl,
+      prompt: prompt || caption || "Custom Post",
+      caption: caption || prompt || "",
+    });
+
+    await newPost.populate("user", "name Avatar bio email _id");
+    return res.status(201).json(newPost);
+  } catch (error) {
+    console.error("createDirectPost error:", error);
+    return res.status(500).json({ message: error.message || "Failed to create post" });
+  }
+};
+
+const postController = { generateAndPost, createDirectPost, getPosts, getPost, likeAndUnlikePost, reportPost };
 
 export default postController;
 

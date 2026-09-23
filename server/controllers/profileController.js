@@ -32,7 +32,26 @@ const getMyFollowings = async (req, res) => {
 const getMyProfile = async (req, res) => {
     try {
         const userId = req.user._id || req.user.id;
-        const user = await User.findById(userId).select("-password -googleId");
+        const user = await User.findById(userId)
+            .select("-password -googleId")
+            .populate("followers", "name Avatar email _id")
+            .populate("following", "name Avatar email _id");
+        if (!user) {
+            return res.status(404).json({ message: "User Not Found!" });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/profile/user/:uid
+const getUserProfileById = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.uid)
+            .select("-password -googleId")
+            .populate("followers", "name Avatar email _id")
+            .populate("following", "name Avatar email _id");
         if (!user) {
             return res.status(404).json({ message: "User Not Found!" });
         }
@@ -93,6 +112,6 @@ const updateProfile = async (req, res) => {
     }
 };
 
-const profileController = { getMyFollowers, getMyFollowings, getMyProfile, updateProfile };
+const profileController = { getMyFollowers, getMyFollowings, getMyProfile, getUserProfileById, updateProfile };
 
 export default profileController;

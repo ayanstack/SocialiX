@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const generateAndPost = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
 
     // Check if user exists
     const user = await User.findById(userId);
@@ -29,59 +29,86 @@ const generateAndPost = async (req, res) => {
     }
 
     const { prompt, caption } = req.body;
-    if (!prompt || !caption) {
+    if (!prompt || !prompt.trim()) {
       return res.status(400).json({ message: "Kindly Provide A prompt!" });
     }
 
-    // Ensure generated-content directory exists
-    const dir = path.join(__dirname, "../generated-content");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); // ✅ Was missing
+    let finalImageUrl = null;
 
-    // Initialize Gemini
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); // ✅ API key was missing
+    // 1. Attempt Gemini / Imagen if GEMINI_API_KEY is provided
+    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY") {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const dir = path.join(__dirname, "../generated-content");
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-preview-image-generation",
-      contents: prompt,
-      config: {
-        responseModalities: ["TEXT", "IMAGE"],
-      },
-    });
+        // Attempt generateImages (Imagen 3)
+        const response = await ai.models.generateImages({
+          model: "imagen-3.0-generate-002",
+          prompt: prompt,
+          config: {
+            numberOfImages: 1,
+            outputMimeType: "image/jpeg",
+          },
+        });
 
-    const parts = response?.candidates?.[0]?.content?.parts || [];
-    let newPost = null;
+        if (response?.generatedImages?.[0]?.image?.imageBytes) {
+          const buffer = Buffer.from(response.generatedImages[0].image.imageBytes, "base64");
+          const filename = crypto.randomUUID() + ".jpg";
+          const filePath = path.join(dir, filename);
 
-    for (const part of parts) {
-      if (part.inlineData) {
-        const buffer = Buffer.from(part.inlineData.data, "base64");
-        const filename = crypto.randomUUID() + ".png";
-        const filePath = path.join(dir, filename);
+          fs.writeFileSync(filePath, buffer);
+          const imageLink = await uploadToCloudinary(filePath);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-        fs.writeFileSync(filePath, buffer);
-        const imageLink = await uploadToCloudinary(filePath);
-        fs.unlinkSync(filePath);
-
-        if (!imageLink?.secure_url) {
-          return res.status(500).json({ message: "Cloudinary Upload Failed!" });
+          if (imageLink?.secure_url) {
+            finalImageUrl = imageLink.secure_url;
+          }
         }
-
-        newPost = await Post.create({ user: userId, imageLink: imageLink.secure_url, prompt: req.body.prompt, caption });
-        await newPost.populate("user");
-
-        //  Deduct credits only after successful post creation
-        await User.findByIdAndUpdate(userId, { $inc: { credits: -1 } });
-        break;
+      } catch (geminiError) {
+        console.warn("Gemini generation warning:", geminiError?.message || geminiError);
       }
     }
 
-    if (!newPost) {
-      return res.status(500).json({ message: "No Image Returned From Gemini!" });
+    // 2. Fallback to Pollinations AI (High quality, keyless AI image generation)
+    if (!finalImageUrl) {
+      try {
+        const seed = Math.floor(Math.random() * 1000000);
+        const encodedPrompt = encodeURIComponent(prompt.trim());
+        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${seed}`;
+
+        const cloudRes = await uploadToCloudinary(pollinationsUrl);
+        if (cloudRes?.secure_url) {
+          finalImageUrl = cloudRes.secure_url;
+        } else {
+          finalImageUrl = pollinationsUrl;
+        }
+      } catch (pollinationErr) {
+        console.error("Pollinations fallback error:", pollinationErr);
+      }
     }
+
+    if (!finalImageUrl) {
+      return res.status(500).json({ message: "Failed to generate image. Please try again!" });
+    }
+
+    const postCaption = caption || prompt;
+    const newPost = await Post.create({
+      user: userId,
+      imageLink: finalImageUrl,
+      prompt: prompt.trim(),
+      caption: postCaption,
+    });
+
+    await newPost.populate("user", "name Avatar bio email _id");
+
+    // Deduct credit after successful post creation
+    await User.findByIdAndUpdate(userId, { $inc: { credits: -1 } });
 
     return res.status(201).json(newPost);
 
   } catch (error) {
-    console.error("generateAndPost error:", error.message);
+    console.error("generateAndPost error:", error.stack || error.message);
     return res.status(500).json({ message: error.message || "Post Not Created!" });
   }
 };

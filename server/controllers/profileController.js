@@ -4,7 +4,8 @@ import fs from "node:fs";
 
 const getMyFollowers = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).populate("followers");
+        const userId = req.user._id || req.user.id;
+        const user = await User.findById(userId).populate("followers");
         if (!user) {
             return res.status(404).json({ message: "User Not Found!" });
         }
@@ -16,7 +17,8 @@ const getMyFollowers = async (req, res) => {
 
 const getMyFollowings = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).populate("following");
+        const userId = req.user._id || req.user.id;
+        const user = await User.findById(userId).populate("following");
         if (!user) {
             return res.status(404).json({ message: "User Not Found!" });
         }
@@ -29,7 +31,8 @@ const getMyFollowings = async (req, res) => {
 // GET /api/profile/me
 const getMyProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select("-password -googleId");
+        const userId = req.user._id || req.user.id;
+        const user = await User.findById(userId).select("-password -googleId");
         if (!user) {
             return res.status(404).json({ message: "User Not Found!" });
         }
@@ -42,7 +45,8 @@ const getMyProfile = async (req, res) => {
 // PUT /api/profile/update
 const updateProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const userId = req.user._id || req.user.id;
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User Not Found!" });
         }

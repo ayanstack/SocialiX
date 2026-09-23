@@ -14,25 +14,25 @@ cloudinary.config({
 
 
 const uploadToCloudinary = async (filePath) => {
-
-
-    // Upload an image
-    const uploadResult = await cloudinary.uploader
-        .upload(
-            filePath, {
+    try {
+        const uploadResult = await cloudinary.uploader.upload(filePath, {
             resource_type: "auto"
-        }
-        )
-        .catch((error) => {
-            console.log(error);
-            // If failes remove file from our server
-            fs.unlinkSync(filePath)
         });
-    return uploadResult
+        return uploadResult;
+    } catch (error) {
+        console.error("Cloudinary upload error:", error?.message || error);
+        if (typeof filePath === "string" && fs.existsSync(filePath)) {
+            try {
+                fs.unlinkSync(filePath);
+            } catch (unlinkErr) {
+                console.error("Error removing local temp file:", unlinkErr);
+            }
+        }
+        return null;
+    }
+};
 
-}
-
-export default uploadToCloudinary
+export default uploadToCloudinary;
 
 
 

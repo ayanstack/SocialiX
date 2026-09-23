@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getAvatarUrl } from '../utils/avatar';
 import EditProfileModal from '../components/EditProfileModal';
+import UserListModal from '../components/UserListModal';
 
 export default function ProfilePage() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const currentUserId = currentUser?._id || currentUser?.id;
   const isMe = currentUserId === id;
   const [showEditModal, setShowEditModal] = useState(false);
+  const [userListModal, setUserListModal] = useState(null); // { title: 'Followers' | 'Following', users: [] }
 
   const [activeTab, setActiveTab] = useState('Posts');
   const [isFollowing, setIsFollowing] = useState(false);
@@ -91,6 +93,7 @@ export default function ProfilePage() {
         await api.put(`/user/follow/${id}`);
         toast.success(`Following ${displayUser?.name || 'user'}`);
       }
+      fetchProfileData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Action failed');
       setIsFollowing(!isFollowing);
@@ -179,18 +182,28 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   
-                  <div className="flex gap-8 bg-white/5 border border-white/10 rounded-2xl p-6 h-fit justify-center md:justify-around">
+                  <div className="flex gap-6 bg-white/5 border border-white/10 rounded-2xl p-6 h-fit justify-center md:justify-around">
                     <div className="text-center">
                       <div className="text-2xl font-bold font-heading">{userPosts.length}</div>
                       <div className="text-xs text-gray-400 uppercase tracking-wider">Posts</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold font-heading">{followersCount}</div>
-                      <div className="text-xs text-gray-400 uppercase tracking-wider">Followers</div>
+                    
+                    {/* Followers Clickable Stat */}
+                    <div 
+                      onClick={() => setUserListModal({ title: 'Followers', users: displayUser?.followers || [] })}
+                      className="text-center cursor-pointer hover:opacity-80 transition-opacity px-2 py-1 rounded-xl hover:bg-white/5"
+                    >
+                      <div className="text-2xl font-bold font-heading text-accentCyan">{followersCount}</div>
+                      <div className="text-xs text-gray-400 uppercase tracking-wider underline underline-offset-4 decoration-accentCyan/40">Followers</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold font-heading">{displayUser?.following?.length || 0}</div>
-                      <div className="text-xs text-gray-400 uppercase tracking-wider">Following</div>
+                    
+                    {/* Following Clickable Stat */}
+                    <div 
+                      onClick={() => setUserListModal({ title: 'Following', users: displayUser?.following || [] })}
+                      className="text-center cursor-pointer hover:opacity-80 transition-opacity px-2 py-1 rounded-xl hover:bg-white/5"
+                    >
+                      <div className="text-2xl font-bold font-heading text-accentViolet">{displayUser?.following?.length || 0}</div>
+                      <div className="text-xs text-gray-400 uppercase tracking-wider underline underline-offset-4 decoration-accentViolet/40">Following</div>
                     </div>
                   </div>
                 </div>
@@ -235,6 +248,16 @@ export default function ProfilePage() {
       {/* Edit Profile Modal */}
       {showEditModal && (
         <EditProfileModal onClose={() => setShowEditModal(false)} />
+      )}
+
+      {/* Followers / Following List Modal */}
+      {userListModal && (
+        <UserListModal
+          title={userListModal.title}
+          users={userListModal.users}
+          onClose={() => setUserListModal(null)}
+          onFollowChange={fetchProfileData}
+        />
       )}
     </div>
   );
